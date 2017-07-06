@@ -1,0 +1,24 @@
+[descr]
+configuration file for Impact formatted output
+End of descr
+[version]
+1.0
+[info]
+cols
+20
+rows
+30
+[format]
+outer
+y
+header
+y
+date
+y
+state
+y
+[symbol]
+main
+=
+support
+-
