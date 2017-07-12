@@ -15,6 +15,7 @@
 
 #define FILE_NOFILE				0x10
 #define FILE_CORRUPT			0x11
+#define FILE_STRUC_ERR			0x12
 
 
 
@@ -26,6 +27,9 @@ typedef unsigned short WORD;
 
 typedef struct st_format_config
 {
+	char str_descr[512];
+	char str_ver[10];
+
 	BYTE cols;
 	BYTE rows;
 
@@ -177,9 +181,10 @@ BYTE read_config(st_format_config * Output_format_config)
 	}
 
 	// > Read config
+	Output_format_config->str_descr[0] = '\0';
+	Output_format_config->str_ver[0] = '\0';
+
 	char str_buf[256] = "";
-	char str_descr[512] = "";
-	char str_ver[10] = "";
 
 	// parse strings, sequential
 	BYTE parseFlag = 0;
@@ -256,7 +261,7 @@ BYTE read_config(st_format_config * Output_format_config)
 				// [DEFAULT STATE]
 
 				// check End of Config
-				if ((str_buf[0] == '\\') && (str_buf[0] == '\\'))
+				if ((str_buf[0] == '\\') && (str_buf[1] == '\\'))
 				{
 					// END OF CONFIG FILE
 
@@ -271,7 +276,19 @@ BYTE read_config(st_format_config * Output_format_config)
 						// [STANDARD LABEL]
 
 						char str_tag[32];
-						GetStrTag(str_buf, str_tag, '[', ']');
+
+						BYTE readFileProc = GetStrTag(str_buf, str_tag, '[', ']');
+
+						if (readFileProc != OP_SUCCESS)
+						{
+							// [OP FAILED]
+
+							// > Close File (config) 
+							fclose(fs);
+
+							// Exit PROC
+							return FILE_STRUC_ERR;
+						}
 
 						// define label type
 						if (strcmp(str_tag, "[descr]") == 0)
@@ -330,7 +347,7 @@ BYTE read_config(st_format_config * Output_format_config)
 					{
 						// add to description string
 						BYTE buf_len = strlen(str_buf);
-						BYTE descr_len = strlen(str_descr);
+						BYTE descr_len = strlen(Output_format_config->str_descr);
 
 						BYTE act = 1;
 
@@ -360,7 +377,7 @@ BYTE read_config(st_format_config * Output_format_config)
 							{
 								// [APPEND]
 
-								str_descr[descr_len + k] = c;
+								Output_format_config->str_descr[descr_len + k] = c;
 
 								// iterator
 								k++;
@@ -368,6 +385,9 @@ BYTE read_config(st_format_config * Output_format_config)
 							else
 							{
 								// [CANCEL]
+
+								// set End of String
+								Output_format_config->str_descr[descr_len + k] = '\0';
 
 								act = 0;
 							}
@@ -425,7 +445,7 @@ BYTE read_config(st_format_config * Output_format_config)
 								{
 									// [APPEND]
 
-									str_ver[k] = c;
+									Output_format_config->str_ver[k] = c;
 
 									k++;
 								}
@@ -437,7 +457,7 @@ BYTE read_config(st_format_config * Output_format_config)
 								}
 							}// while (act)
 
-							str_ver[k] = '\0';
+							Output_format_config->str_ver[k] = '\0';
 						}//else /if (str_buf[0] == '\n')
 					}//else /if (str_buf[0] == '\\')
 
@@ -715,7 +735,7 @@ BYTE read_config(st_format_config * Output_format_config)
 								// [DEFAULT STATE]
 
 								// try to define [param]
-								if (strcmp(str_buf, "cols\n") == 0)
+								if (strcmp(str_buf, "main\n") == 0)
 								{
 									// [PARAM FOUND]
 
@@ -723,7 +743,7 @@ BYTE read_config(st_format_config * Output_format_config)
 									paramFlag = 1;
 								}
 
-								if (strcmp(str_buf, "rows\n") == 0)
+								if (strcmp(str_buf, "support\n") == 0)
 								{
 									// [PARAM FOUND]
 
@@ -770,24 +790,19 @@ BYTE read_config(st_format_config * Output_format_config)
 
 
 				default:
+
 					break;
 
-					}//switch (parseFlag)
-
-
+				}//switch (parseFlag)
 			}//if (parseFlag == 0)
-
-
 		}//else if (fgets(str_buf, 256, fs) == "NULL")
-
-
-	}//then if (fgets(str_buf, 256, fs) == "NULL")
-
-	
+	}//then if (fgets(str_buf, 256, fs) == "NULL")	
 
 	// > Close File (config) 
 	fclose(fs);
 
+
+	return OP_SUCCESS;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -796,36 +811,43 @@ BYTE read_config(st_format_config * Output_format_config)
 int main(int argc, char * argv[]) 
 {
 	// > Output Common Info
-
+	printf("Wellcome to the ImpactFormat! [ver 1.0] \n\n");
 
 	// > Check resource, output status
 	st_format_config frm_conf;
 
-
+	// read config file
 	BYTE readFileProc =	read_config(&frm_conf);
 
-	// check file open result
+	// check file read status
 	switch (readFileProc)
 	{
 	case OP_SUCCESS:
+		printf("* Config file read... [OK] \n");
 
 		break;
 
 	case FILE_NOFILE:
-		printf("No such file in directory. \n");
+		printf("* Config file: No such file in directory. \n");
 
 		break;
 
+	case FILE_STRUC_ERR:
+		printf("* Config file: Config file structure error. \n");
+
+		break;		
 	default:
 
 		break;
 
 	}//switch (readFileProc)
-	
+
+	printf("\n");
+
 
 	// > Output Parameters
-	printf("used parameters:\n");
-	printf("# executed from: %s\n", argv[0]);
+	printf("Used parameters:\n");
+	printf("- executed from: %s\n", argv[0]);
 
 	if (argc > 1)
 	{
@@ -869,11 +891,12 @@ int main(int argc, char * argv[])
 						// print config
 						printf("Config: \n");
 					}
-
 				}
 				else
 				{
 					// [SPECIFIC KEY]
+
+					act = 0;
 				}
 			}// parse k-param
 

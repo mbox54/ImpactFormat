@@ -4,6 +4,7 @@ configuration file for Impact formatted output
 
 [version]
 1.0
+\
 
 [size]
 cols
@@ -11,6 +12,7 @@ cols
 
 rows
 30
+\
 
 [format]
 outer
@@ -24,6 +26,7 @@ y
 
 state
 y
+\
 
 [symbol]
 main
@@ -31,3 +34,5 @@ main
 
 support
 -
+\
+\\
