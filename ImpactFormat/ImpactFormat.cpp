@@ -263,7 +263,7 @@ BYTE read_config(st_format_config * Output_format_config)
 				// check End of Config
 				if ((str_buf[0] == '\\') && (str_buf[1] == '\\'))
 				{
-					// END OF CONFIG FILE
+					// [END OF CONFIG FILE]
 
 					// cancel parse cycle
 					act = 0;
@@ -866,38 +866,104 @@ int main(int argc, char * argv[])
 	}
 
 	// > Parse parameters:
+	char str_filename[64] = "";
+
 	if (argc > 1)
 	{
 		// [PARAMS EXISTS]
+
 		// parse params
 		for (int k = 0; k < argc; k++)
 		{
 			// parse k-param String
-			BYTE act = 1;
-			while (act)
+			if (argv[k][0] == '-')
 			{
-				if (argv[k][0] == '-')
-				{
-					// [STANDARD KEY]
+				// [STANDARD KEY]
 
-					if (argv[k] == "-help")
+				if (strncmp(argv[k], "-help", 5) == 0)
+				{
+					// print help info
+					printf("Help: \n");
+				}
+
+				if (strncmp(argv[k], "-config", 7) == 0)
+				{
+					// print config
+					printf("Config: \n");
+				}
+
+				if (strncmp(argv[k], "-file", 5) == 0)
+				{
+					// NOTE:
+					// FORMAT: file=filename
+
+					// print file mode params
+					char str_filename[64];
+					char c;
+					BYTE proc_mode = 0;
+
+					BYTE kk = 0;			// cycle foreach argv[k][kk] str
+					BYTE k2 = 0;			// cycle foreach str_filename[k2] str
+
+					BYTE act = 1;
+					while (act)
 					{
-						// print help info
-						printf("Help: \n");
+						c = argv[k][kk];
+
+						// check End of Param
+						if (c == '\0')
+						{
+							// [PARAM END]
+
+							act = 0;
+						}
+						else
+						{
+							// [PROC]
+
+							// > Check parse mode
+							if (proc_mode == 0)
+							{
+								// [INIT]
+
+								// check start of Param Value
+								if (c == '=')
+								{
+									// set mode
+									proc_mode = 1;
+
+								}
+							}
+							else
+							{
+								if (proc_mode == 1)
+								{
+									// [FORM FILENAME STRING]
+
+									// append symbol
+									str_filename[k2] = c;
+
+									k2++;
+								}
+							}//else /if (proc_mode == 0)
+
+						}//else /if (c == '\0')
+
+						kk++;
+
 					}
 
-					if (argv[k] == "-c")
-					{
-						// print config
-						printf("Config: \n");
-					}
-				}
-				else
-				{
-					// [SPECIFIC KEY]
+					// put string ender
+					str_filename[k2] = '\0';
 
-					act = 0;
+					printf("%s \n", str_filename);
 				}
+
+			}
+			else
+			{
+				// [SPECIFIC KEY]
+
 			}// parse k-param
 
 		}
