@@ -17,7 +17,11 @@
 #define FILE_CORRUPT			0x11
 #define FILE_STRUC_ERR			0x12
 
-
+#define MAX_STR_BUF				256
+#define MAX_STR_TIT				64
+#define MAX_STR_DESCR			512
+#define MAX_STR_VER				10
+#define MAX_STR_TAG				128
 
 //////////////////////////////////////////////////////////////////////
 // Typedef
@@ -27,8 +31,8 @@ typedef unsigned short WORD;
 
 typedef struct st_format_config
 {
-	char str_descr[512];
-	char str_ver[10];
+	char str_descr[MAX_STR_DESCR];
+	char str_ver[MAX_STR_VER];
 
 	BYTE cols;
 	BYTE rows;
@@ -54,7 +58,7 @@ BYTE GetStrTag(char * strParse, char * strOutput, char chOpenSymbol, char chClos
 	// act = 0: cycle end proc   
 	// act = 1: try find Open symbol
 	// act = 2: try find Close symbol
-	char strTag[128];
+	char strTag[MAX_STR_TAG];
 
 	BYTE k = 0;
 	BYTE ucFstPos = 0;
@@ -163,7 +167,7 @@ BYTE GetStrTag(char * strParse, char * strOutput, char chOpenSymbol, char chClos
 
 
 // read config file with format parameters
-BYTE read_config(st_format_config * Output_format_config)
+BYTE Read_config(st_format_config * Output_format_config)
 {
 	// > Open File (config)
 	// default name
@@ -184,7 +188,7 @@ BYTE read_config(st_format_config * Output_format_config)
 	Output_format_config->str_descr[0] = '\0';
 	Output_format_config->str_ver[0] = '\0';
 
-	char str_buf[256] = "";
+	char str_buf[MAX_STR_BUF] = "";
 
 	// parse strings, sequential
 	BYTE parseFlag = 0;
@@ -194,7 +198,7 @@ BYTE read_config(st_format_config * Output_format_config)
 	while (act)
 	{
 		// get File String Line
-		if (fgets(str_buf, 256, fs) == "NULL")
+		if (fgets(str_buf, MAX_STR_BUF, fs) == "NULL")
 		{
 			// [STOP]
 
@@ -275,7 +279,7 @@ BYTE read_config(st_format_config * Output_format_config)
 					{
 						// [STANDARD LABEL]
 
-						char str_tag[32];
+						char str_tag[MAX_STR_TAG];
 
 						BYTE readFileProc = GetStrTag(str_buf, str_tag, '[', ']');
 
@@ -352,7 +356,7 @@ BYTE read_config(st_format_config * Output_format_config)
 						BYTE act = 1;
 
 						// safe check
-						if (descr_len + buf_len < 512)
+						if (descr_len + buf_len < MAX_STR_DESCR)
 						{
 							// [VALID]
 
@@ -420,11 +424,11 @@ BYTE read_config(st_format_config * Output_format_config)
 
 							// check valid length
 							BYTE ver_len = strlen(str_buf);
-							if (ver_len > 10)
+							if (ver_len > MAX_STR_VER)
 							{
 								// [NEED CORRECT]
 
-								str_buf[9] = '\0';
+								str_buf[MAX_STR_VER - 1] = '\0';
 							}
 							else
 							{
@@ -805,6 +809,97 @@ BYTE read_config(st_format_config * Output_format_config)
 	return OP_SUCCESS;
 }
 
+
+// read config file with format parameters
+BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_format_config Output_format_config)
+{
+	// > Define RowTypes Matrix
+
+	// FORMAT:
+	// # Row Attributes:
+	// VAL | TYPE
+	//  0  | SMARK
+	//  1  | FMARK
+	//  2  | XBAR
+	//  3  | YBAR
+	//  4  | TITLE
+	//  5  | STATE
+	//  6  | TEXT
+	//
+	// # Row	Types
+	// NUM |	
+	//  0  |	|===========			========| 
+	//  1  |	|	# TITLE				/DATE	|
+	//  2  |	|-----------			--------|
+	//  3  |	|	/null string/  		        |
+	//  k  |	|	TEXT       			        |
+	// N-4 |	|	/null string/  		        |
+	// N-3 |	|-----------			--------|
+	// N-2 |	| 						/PAGE X |
+	// N-1 |	|===========			========| 
+
+	BYTE v_rowTypes[9][7] = {
+//	0  1  2  3  4  5  6  
+	1, 1, 1, 0, 0, 0, 0,	// [0]
+	1, 1, 0, 0, 1, 0, 0,	// [1]
+	1, 1, 0, 1, 0, 0, 0,	// [2]
+	1, 1, 0, 0, 0, 0, 0,	// [3]
+							// ...
+	1, 1, 0, 0, 0, 0, 1,	// [k]
+							// ...
+	1, 1, 0, 0, 0, 0, 0,	// [N-4]
+	1, 1, 0, 1, 0, 0, 0,	// [N-3]
+	1, 1, 0, 0, 0, 1, 0,	// [N-2]
+	1, 1, 1, 0, 0, 0, 0,	// [N-1]
+	};
+
+	const BYTE RT_TEMPL_S = 4;
+	const BYTE RT_TEMPL_F = 4;
+	const BYTE RT_TEMPL_N = 9;
+
+
+	// > Row Type Get	[#01]
+
+	// FORMAT:
+	// Text File content type:
+	// Line 00: TITLE
+	// Line XX: TEXT
+
+	// open Text File
+	// // try open
+	FILE *ft = fopen(str_imputFilename, "r");
+
+	// // check OP result
+	if (ft == NULL)
+	{
+		// [fail to open]
+
+		return FILE_NOFILE;
+	}
+
+	// get TITLE
+	char str_buf[MAX_STR_BUF] = "";
+
+	// get File String Line
+	if (fgets(str_buf, MAX_STR_TIT, ft) == "NULL")
+	{
+		// [fail to open]
+
+		return FILE_STRUC_ERR;
+	}
+
+
+
+
+	// > Close File (text) 
+	fclose(ft);
+
+
+	return OP_SUCCESS;
+
+
+}
+
 //////////////////////////////////////////////////////////////////////
 // Main routine
 //////////////////////////////////////////////////////////////////////
@@ -817,7 +912,7 @@ int main(int argc, char * argv[])
 	st_format_config frm_conf;
 
 	// read config file
-	BYTE readFileProc =	read_config(&frm_conf);
+	BYTE readFileProc =	Read_config(&frm_conf);
 
 	// check file read status
 	switch (readFileProc)
@@ -884,6 +979,12 @@ int main(int argc, char * argv[])
 				{
 					// print help info
 					printf("Help: \n");
+				}
+
+				if (strncmp(argv[k], "-s", 2) == 0)
+				{
+					// print help info
+					printf("silent mode: \n");
 				}
 
 				if (strncmp(argv[k], "-config", 7) == 0)
@@ -969,9 +1070,13 @@ int main(int argc, char * argv[])
 		}
 	}
 	
+	// > Print formatted routine
+
+
 
 	// > End of program
 	// wait any key press
+	printf("\n %s \n", "Press any key to exit...");
 	getchar();
 
     return 0;
