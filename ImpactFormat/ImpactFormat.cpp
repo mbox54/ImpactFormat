@@ -858,13 +858,8 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 	const BYTE RT_TEMPL_N = 9;
 
 
-	// > Row Type Get	[#01]
 
-	// FORMAT:
-	// Text File content type:
-	// Line 00: TITLE
-	// Line XX: TEXT
-
+	// > File init OPs
 	// open Text File
 	// // try open
 	FILE *ft = fopen(str_imputFilename, "r");
@@ -877,7 +872,8 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 		return FILE_NOFILE;
 	}
 
-	// get TITLE
+	// > Get TITLE
+	// Line 00: TITLE
 	char str_buf[MAX_STR_BUF] = "";
 
 	// get File String Line
@@ -888,7 +884,51 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 		return FILE_STRUC_ERR;
 	}
 
+	// set Title Text
+	char str_TITLE[MAX_STR_TIT];
+	strncpy(str_TITLE, str_buf, MAX_STR_TIT);
 
+
+	// > Row Type Get routine	[#01]
+	// FORMAT:
+	// Text File content type:
+	// Line 00: TITLE
+	// Line XX: TEXT
+
+	BYTE k = 0;				// Impact Row 
+	BYTE ucRowType;
+
+	BYTE act = 1;
+	while (act)
+	{
+		// check k
+		if (k < Output_format_config.rows)
+		{
+			// [IN IMPACT PAGE]
+
+			if (k < RT_TEMPL_S)
+			{
+				// [IN IMPACT PAGE STARTER]
+
+				ucRowType = k;
+			}
+			else
+			{
+				if (k > Output_format_config.rows - RT_TEMPL_F)
+				{
+					// [IN IMPACT PAGE FINALIZES]
+
+
+				}
+				else
+				{
+					// []
+
+				}
+			}
+
+		}
+	}
 
 
 	// > Close File (text) 
