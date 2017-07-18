@@ -22,6 +22,7 @@
 #define MAX_STR_DESCR			512
 #define MAX_STR_VER				10
 #define MAX_STR_TAG				128
+#define MAX_STR_LINE			64
 
 //////////////////////////////////////////////////////////////////////
 // Typedef
@@ -165,6 +166,18 @@ BYTE GetStrTag(char * strParse, char * strOutput, char chOpenSymbol, char chClos
 	return OP_SUCCESS;
 }
 
+// 
+BYTE Fill_Char(char * str_Fill, char chSymbol, BYTE ucFromPos, BYTE ucCount)
+{
+	// fill OP
+	for (BYTE k = 0; k < ucCount; k++)
+	{
+		str_Fill[ucFromPos + k] = chSymbol;
+	}
+
+	// add string ender
+	str_Fill[ucFromPos + ucCount] = '\0';
+}
 
 // read config file with format parameters
 BYTE Read_config(st_format_config * Output_format_config)
@@ -876,7 +889,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 	// Line 00: TITLE
 	char str_buf[MAX_STR_BUF] = "";
 
-	// get File String Line
+	// get File Text Line
 	if (fgets(str_buf, MAX_STR_TIT, ft) == "NULL")
 	{
 		// [fail to open]
@@ -897,6 +910,12 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 
 	BYTE k = 0;				// Impact Row 
 	BYTE ucRowType;
+	BYTE ucLinePos;
+	BYTE ucLineSeg;			// number of impact segmented line
+	BYTE bLineCont = 0;		// file line = impact multiline
+	BYTE bFileCont = 1;		// impact end line reach
+
+	char str_Line[MAX_STR_LINE];
 
 	BYTE act = 1;
 	while (act)
@@ -914,20 +933,145 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 			}
 			else
 			{
-				if (k > Output_format_config.rows - RT_TEMPL_F)
+				if (k > Output_format_config.rows - RT_TEMPL_F - 1)
 				{
 					// [IN IMPACT PAGE FINALIZES]
 
-
+					ucRowType = RT_TEMPL_N - (Output_format_config.rows - k);
 				}
 				else
 				{
-					// []
+					// [IN IMPACT PAGE TEXT]
 
+					// position next to RT_TEMPL_S is TEXT position
+					ucRowType = RT_TEMPL_S;
 				}
-			}
+			}//else /if (k < RT_TEMPL_S)
+
+			k++;
+
+		}//then /if (k < Output_format_config.rows)
+		else
+		{
+			// [IMPACT PAGE ENDED]
+
+
+			// reset Page Row counter
+			k = 0;
+
+			// !debug for 1 Page
+			act = 0;
+		}
+
+		// > Fill Row routine [#02]
+		// reset Line Position
+		ucLinePos = 0;
+		
+		// proceed RowType
+		// NOTE: sequence is strictly recommended
+		if (v_rowTypes[ucRowType, 0])
+		{
+			// [START_MARK]
+
+			// !need correct
+			// str_Line[ucLinePos] = Output_format_config.main;
+			str_Line[ucLinePos] = '|';
+
+			ucLinePos++;
+		}
+
+		if (v_rowTypes[ucRowType, 2])
+		{
+			// [CROSS_BAR]
+
+			Fill_Char(str_Line, Output_format_config.main, 1, Output_format_config.cols - 2);
+		}
+
+		if (v_rowTypes[ucRowType, 4])
+		{
+			// [TITLE]
+
 
 		}
+
+		if (v_rowTypes[ucRowType, 3])
+		{
+			// [SUPPORT_BAR]
+
+			Fill_Char(str_Line, Output_format_config.support, 1, Output_format_config.cols - 2);
+		}
+
+		if (v_rowTypes[ucRowType, 6])
+		{
+			// [TEXT]
+
+			if (bFileCont)
+			{
+				// [FILE TEXT PROC]
+
+				// check file continuation
+				if (bLineCont = 0)
+				{
+					// [STRING LINE START]
+
+					// get File Text Line
+					if (fgets(str_buf, MAX_STR_BUF, ft) == "NULL")
+					{
+						// [END OF FILE]
+
+						// Text file ends
+						bFileCont = 0;
+
+						// set buffer Value to end text OP
+						str_buf[0] = '\0';
+					}
+					else
+					{
+						// [CONTINUE TEXT]
+
+						// init segment number
+						ucLineSeg = 0;
+
+					}//if (fgets(str_buf, MAX_STR_BUF, ft) == "NULL")
+				}//then /if (bCont = 0)
+				else
+				{
+					// [STRING LINE CONTINUE]
+
+					// NOP
+
+				}//else /if (bLineCont = 0)
+
+				// > Proceed buffer with text file line 
+				BYTE ucLineSize = strlen(str_buf);
+
+
+
+			}//then /if (bFileCont)
+			else
+			{
+				// [FILE TEXT ENDS]
+				// fill nulls to the end of impact page
+
+				// null string
+				str_buf[0] = '\0';
+			}
+
+
+		}
+
+		if (v_rowTypes[ucRowType, 5])
+		{
+			// [STATE]
+
+
+		}
+
+		if (v_rowTypes[ucRowType, 1])
+		{
+			// [FINAL_MARK]
+		}
+
 	}
 
 
