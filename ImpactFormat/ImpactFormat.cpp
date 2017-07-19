@@ -166,7 +166,7 @@ BYTE GetStrTag(char * strParse, char * strOutput, char chOpenSymbol, char chClos
 	return OP_SUCCESS;
 }
 
-// 
+// fill str with defined char from position X to X + C
 BYTE Fill_Char(char * str_Fill, char chSymbol, BYTE ucFromPos, BYTE ucCount)
 {
 	// fill OP
@@ -177,6 +177,19 @@ BYTE Fill_Char(char * str_Fill, char chSymbol, BYTE ucFromPos, BYTE ucCount)
 
 	// add string ender
 	str_Fill[ucFromPos + ucCount] = '\0';
+}
+
+// copy number C of chars from str_input position X1 to str_output position X2
+BYTE Append_StrPart(char * str_Input, char * str_Output, BYTE ucFromPos, BYTE ucToPos, BYTE ucCount)
+{
+	// copy OP
+	for (BYTE k = 0; k < ucCount; k++)
+	{
+		str_Output[ucToPos + k] = str_Input[ucFromPos + k];
+	}
+
+	// transfer string ender
+	str_Output[ucToPos + ucCount] = '\0';
 }
 
 // read config file with format parameters
@@ -912,6 +925,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 	BYTE ucRowType;
 	BYTE ucLinePos;
 	BYTE ucLineSeg;			// number of impact segmented line
+	BYTE ucPageSeg = 0;		// number of impact segmented page
 	BYTE bLineCont = 0;		// file line = impact multiline
 	BYTE bFileCont = 1;		// impact end line reach
 
@@ -955,13 +969,24 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 		{
 			// [IMPACT PAGE ENDED]
 
+			if (bFileCont)
+			{
+				// [TEXT FILE NOT ENDED]
 
-			// reset Page Row counter
-			k = 0;
+				// reset impact page Row counter
+				k = 0;
 
-			// !debug for 1 Page
-			act = 0;
-		}
+				// define RowType
+				ucRowType = k;
+			}
+			else
+			{
+				// [TEXT FILE ENDS]
+
+				// end of formatting Proc
+				act = 0;
+			}
+		}//else /if (k < Output_format_config.rows)
 
 		// > Fill Row routine [#02]
 		// reset Line Position
@@ -985,12 +1010,15 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 			// [CROSS_BAR]
 
 			Fill_Char(str_Line, Output_format_config.main, 1, Output_format_config.cols - 2);
+
+			ucLinePos += Output_format_config.cols - 2;
 		}
 
 		if (v_rowTypes[ucRowType, 4])
 		{
 			// [TITLE]
 
+			//
 
 		}
 
@@ -999,6 +1027,8 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 			// [SUPPORT_BAR]
 
 			Fill_Char(str_Line, Output_format_config.support, 1, Output_format_config.cols - 2);
+
+			ucLinePos += Output_format_config.cols - 2;
 		}
 
 		if (v_rowTypes[ucRowType, 6])
@@ -1043,9 +1073,47 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 				}//else /if (bLineCont = 0)
 
 				// > Proceed buffer with text file line 
-				BYTE ucLineSize = strlen(str_buf);
+				BYTE ucLineTextSize = strlen(str_buf);
+				BYTE ucLineSize;
 
+				if ( ucLineTextSize < (ucLineSeg + 1) * (Output_format_config.cols - 2) )
+				{
+					// [LINE TERMINATES]
 
+					// calc Line String Remains
+					ucLineSize = ucLineTextSize - ucLineSeg * (Output_format_config.cols - 2);
+
+					// copy Text from Line
+					Append_StrPart(str_buf, str_Line, ucLinePos, ucLineSeg * (Output_format_config.cols - 2), ucLineSize);
+
+					// update current LinePos
+					ucLinePos += ucLineSize;
+
+					// fill Null-spaces to the End of Impact Line
+					BYTE ucLineRemains = Output_format_config.cols - 2 - ucLineSize;
+					Fill_Char(str_Line, ' ', ucLinePos, ucLineRemains);
+
+					// update current LinePos
+					ucLinePos += ucLineRemains;
+
+				}
+				else
+				{
+					// [LINE CONTINUATES]
+
+					// calc Line String Remains
+					ucLineSize = Output_format_config.cols - 2;
+
+					// copy Text from Line
+					Append_StrPart(str_buf, str_Line, ucLinePos, ucLineSeg * (Output_format_config.cols - 2), ucLineSize);
+
+					// set Continue Flag
+					bLineCont = 1;
+
+				}//else /if ( ucLineTextSize < (ucLineSeg + 1) * (Output_format_config.cols - 2) )
+
+				// inc segment number
+				ucLineSeg++;
 
 			}//then /if (bFileCont)
 			else
@@ -1055,24 +1123,36 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 
 				// null string
 				str_buf[0] = '\0';
-			}
 
-
-		}
+			}//else /if (bFileCont)
+		}//if (v_rowTypes[ucRowType, 6])
 
 		if (v_rowTypes[ucRowType, 5])
 		{
 			// [STATE]
 
-
+			//
 		}
 
 		if (v_rowTypes[ucRowType, 1])
 		{
 			// [FINAL_MARK]
+
+			// !need correct
+			// str_Line[ucLinePos] = Output_format_config.main;
+			str_Line[ucLinePos] = '|';
+
+			// update current LinePos
+			ucLinePos++;
 		}
 
-	}
+		// > Write Line to Impact Formatted File
+		//
+
+		// next Impact Line
+		k++;
+
+	}//
 
 
 	// > Close File (text) 
