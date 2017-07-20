@@ -177,6 +177,8 @@ BYTE Fill_Char(char * str_Fill, char chSymbol, BYTE ucFromPos, BYTE ucCount)
 
 	// add string ender
 	str_Fill[ucFromPos + ucCount] = '\0';
+
+	return 0;
 }
 
 // copy number C of chars from str_input position X1 to str_output position X2
@@ -190,6 +192,8 @@ BYTE Append_StrPart(char * str_Input, char * str_Output, BYTE ucFromPos, BYTE uc
 
 	// transfer string ender
 	str_Output[ucToPos + ucCount] = '\0';
+
+	return 0;
 }
 
 // read config file with format parameters
@@ -884,7 +888,6 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 	const BYTE RT_TEMPL_N = 9;
 
 
-
 	// > File init OPs
 	// open Text File
 	// // try open
@@ -914,6 +917,8 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 	char str_TITLE[MAX_STR_TIT];
 	strncpy(str_TITLE, str_buf, MAX_STR_TIT);
 
+	// > Create an empty File for output impact formatted. 
+	FILE *fi = fopen(str_outputFilename, "w");
 
 	// > Row Type Get routine	[#01]
 	// FORMAT:
@@ -962,6 +967,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 				}
 			}//else /if (k < RT_TEMPL_S)
 
+			// next Impact Line
 			k++;
 
 		}//then /if (k < Output_format_config.rows)
@@ -994,7 +1000,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 		
 		// proceed RowType
 		// NOTE: sequence is strictly recommended
-		if (v_rowTypes[ucRowType, 0])
+		if (v_rowTypes[ucRowType][0])
 		{
 			// [START_MARK]
 
@@ -1005,7 +1011,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 			ucLinePos++;
 		}
 
-		if (v_rowTypes[ucRowType, 2])
+		if (v_rowTypes[ucRowType][2])
 		{
 			// [CROSS_BAR]
 
@@ -1014,7 +1020,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 			ucLinePos += Output_format_config.cols - 2;
 		}
 
-		if (v_rowTypes[ucRowType, 4])
+		if (v_rowTypes[ucRowType][4])
 		{
 			// [TITLE]
 
@@ -1022,7 +1028,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 
 		}
 
-		if (v_rowTypes[ucRowType, 3])
+		if (v_rowTypes[ucRowType][3])
 		{
 			// [SUPPORT_BAR]
 
@@ -1031,7 +1037,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 			ucLinePos += Output_format_config.cols - 2;
 		}
 
-		if (v_rowTypes[ucRowType, 6])
+		if (v_rowTypes[ucRowType][6])
 		{
 			// [TEXT]
 
@@ -1127,14 +1133,17 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 			}//else /if (bFileCont)
 		}//if (v_rowTypes[ucRowType, 6])
 
-		if (v_rowTypes[ucRowType, 5])
+		if (v_rowTypes[ucRowType][5])
 		{
 			// [STATE]
 
-			//
+			//!need to replace with STATE
+			Fill_Char(str_Line, ' ', 1, Output_format_config.cols - 2);
+
+			ucLinePos += Output_format_config.cols - 2;
 		}
 
-		if (v_rowTypes[ucRowType, 1])
+		if (v_rowTypes[ucRowType][1])
 		{
 			// [FINAL_MARK]
 
@@ -1146,17 +1155,20 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 			ucLinePos++;
 		}
 
+		// set String Line ender
+		str_Line[ucLinePos] = '\0';
+
 		// > Write Line to Impact Formatted File
-		//
+		fputs(str_Line, fi);
 
-		// next Impact Line
-		k++;
-
-	}//
+	}//while (act)
 
 
 	// > Close File (text) 
 	fclose(ft);
+
+	// > Close File (impact) 
+	fclose(fi);
 
 
 	return OP_SUCCESS;
@@ -1323,19 +1335,18 @@ int main(int argc, char * argv[])
 
 					printf("%s \n", str_filename);
 				}
-
 			}
 			else
 			{
-				// [SPECIFIC KEY]
+				//[SPECIFIC KEY]
 
-			}// parse k-param
-
-		}
-	}
+			}//parse k-param
+		}//for (int k = 0; k < argc; k++)
+	}//if (argc > 1)
 	
 	// > Print formatted routine
-
+	Interpret_impact("textfile.txt", "textfile_out.txt", frm_conf);
+	
 
 
 	// > End of program
