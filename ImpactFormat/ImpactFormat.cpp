@@ -852,9 +852,10 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 	//  1  | FMARK
 	//  2  | XBAR
 	//  3  | YBAR
-	//  4  | TITLE
-	//  5  | STATE
-	//  6  | TEXT
+	//  4  | NBAR
+	//  5  | TITLE
+	//  6  | STATE
+	//  7  | TEXT
 	//
 	// # Row	Types
 	// NUM |	
@@ -868,19 +869,19 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 	// N-2 |	| 						/PAGE X |
 	// N-1 |	|===========			========| 
 
-	BYTE v_rowTypes[9][7] = {
-//	0  1  2  3  4  5  6  
-	1, 1, 1, 0, 0, 0, 0,	// [0]
-	1, 1, 0, 0, 1, 0, 0,	// [1]
-	1, 1, 0, 1, 0, 0, 0,	// [2]
-	1, 1, 0, 0, 0, 0, 0,	// [3]
+	BYTE v_rowTypes[9][8] = {
+//	0  1  2  3  4  5  6  7 
+	1, 1, 1, 0, 0, 0, 0, 0,	// [0]
+	1, 1, 0, 0, 0, 1, 0, 0,	// [1]
+	1, 1, 0, 1, 0, 0, 0, 0,	// [2]
+	1, 1, 0, 0, 1, 0, 0, 0,	// [3]
 							// ...
-	1, 1, 0, 0, 0, 0, 1,	// [k]
+	1, 1, 0, 0, 0, 0, 0, 1,	// [k]
 							// ...
-	1, 1, 0, 0, 0, 0, 0,	// [N-4]
-	1, 1, 0, 1, 0, 0, 0,	// [N-3]
-	1, 1, 0, 0, 0, 1, 0,	// [N-2]
-	1, 1, 1, 0, 0, 0, 0,	// [N-1]
+	1, 1, 0, 0, 1, 0, 0, 0,	// [N-4]
+	1, 1, 0, 1, 0, 0, 0, 0,	// [N-3]
+	1, 1, 0, 0, 0, 0, 1, 0,	// [N-2]
+	1, 1, 1, 0, 0, 0, 0, 0,	// [N-1]
 	};
 
 	const BYTE RT_TEMPL_S = 4;
@@ -998,8 +999,13 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 		// reset Line Position
 		ucLinePos = 0;
 		
+		// reset Line String
+		str_Line[0] = '\0';
+
 		// proceed RowType
 		// NOTE: sequence is strictly recommended
+
+		// [%]
 		if (v_rowTypes[ucRowType][0])
 		{
 			// [START_MARK]
@@ -1011,6 +1017,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 			ucLinePos++;
 		}
 
+		// [%]
 		if (v_rowTypes[ucRowType][2])
 		{
 			// [CROSS_BAR]
@@ -1020,14 +1027,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 			ucLinePos += Output_format_config.cols - 2;
 		}
 
-		if (v_rowTypes[ucRowType][4])
-		{
-			// [TITLE]
-
-			//
-
-		}
-
+		// [%]
 		if (v_rowTypes[ucRowType][3])
 		{
 			// [SUPPORT_BAR]
@@ -1037,7 +1037,43 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 			ucLinePos += Output_format_config.cols - 2;
 		}
 
+		// [%]
+		if (v_rowTypes[ucRowType][4])
+		{
+			// [NULL_BAR]
+
+			//!need to replace with STATE
+			Fill_Char(str_Line, ' ', 1, Output_format_config.cols - 2);
+
+			ucLinePos += Output_format_config.cols - 2;
+
+		}
+
+		// [%]
+		if (v_rowTypes[ucRowType][5])
+		{
+			// [TITLE]
+
+			//!need to replace with STATE
+			Fill_Char(str_Line, ' ', 1, Output_format_config.cols - 2);
+
+			ucLinePos += Output_format_config.cols - 2;
+
+		}
+
+		// [%]
 		if (v_rowTypes[ucRowType][6])
+		{
+			// [STATE]
+
+			//!need to replace with STATE
+			Fill_Char(str_Line, ' ', 1, Output_format_config.cols - 2);
+
+			ucLinePos += Output_format_config.cols - 2;
+		}
+
+		// [%]
+		if (v_rowTypes[ucRowType][7])
 		{
 			// [TEXT]
 
@@ -1046,7 +1082,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 				// [FILE TEXT PROC]
 
 				// check file continuation
-				if (bLineCont = 0)
+				if (bLineCont == 0)
 				{
 					// [STRING LINE START]
 
@@ -1080,7 +1116,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 
 				// > Proceed buffer with text file line 
 				BYTE ucLineTextSize = strlen(str_buf);
-				BYTE ucLineSize;
+				BYTE ucLineSize = 0;
 
 				if ( ucLineTextSize < (ucLineSeg + 1) * (Output_format_config.cols - 2) )
 				{
@@ -1090,7 +1126,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 					ucLineSize = ucLineTextSize - ucLineSeg * (Output_format_config.cols - 2);
 
 					// copy Text from Line
-					Append_StrPart(str_buf, str_Line, ucLinePos, ucLineSeg * (Output_format_config.cols - 2), ucLineSize);
+					Append_StrPart(str_buf, str_Line, ucLineSeg * (Output_format_config.cols - 2), ucLinePos, ucLineSize);
 
 					// update current LinePos
 					ucLinePos += ucLineSize;
@@ -1111,7 +1147,10 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 					ucLineSize = Output_format_config.cols - 2;
 
 					// copy Text from Line
-					Append_StrPart(str_buf, str_Line, ucLinePos, ucLineSeg * (Output_format_config.cols - 2), ucLineSize);
+					Append_StrPart(str_buf, str_Line, ucLineSeg * (Output_format_config.cols - 2), ucLinePos, ucLineSize);
+
+					// update current LinePos
+					ucLinePos += ucLineSize;
 
 					// set Continue Flag
 					bLineCont = 1;
@@ -1133,16 +1172,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 			}//else /if (bFileCont)
 		}//if (v_rowTypes[ucRowType, 6])
 
-		if (v_rowTypes[ucRowType][5])
-		{
-			// [STATE]
-
-			//!need to replace with STATE
-			Fill_Char(str_Line, ' ', 1, Output_format_config.cols - 2);
-
-			ucLinePos += Output_format_config.cols - 2;
-		}
-
+		// [%]
 		if (v_rowTypes[ucRowType][1])
 		{
 			// [FINAL_MARK]
