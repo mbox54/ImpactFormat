@@ -907,7 +907,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 	char str_buf[MAX_STR_BUF] = "";
 
 	// get File Text Line
-	if (fgets(str_buf, MAX_STR_TIT, ft) == "NULL")
+	if (fgets(str_buf, MAX_STR_TIT, ft) == NULL)
 	{
 		// [fail to open]
 
@@ -934,6 +934,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 	BYTE ucPageSeg = 0;		// number of impact segmented page
 	BYTE bLineCont = 0;		// file line = impact multiline
 	BYTE bFileCont = 1;		// impact end line reach
+	BYTE ucLineTextSize;
 
 	char str_Line[MAX_STR_LINE];
 
@@ -992,6 +993,10 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 
 				// end of formatting Proc
 				act = 0;
+
+				// exit Append Impact File
+				break;
+
 			}
 		}//else /if (k < Output_format_config.rows)
 
@@ -1042,7 +1047,6 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 		{
 			// [NULL_BAR]
 
-			//!need to replace with STATE
 			Fill_Char(str_Line, ' ', 1, Output_format_config.cols - 2);
 
 			ucLinePos += Output_format_config.cols - 2;
@@ -1054,7 +1058,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 		{
 			// [TITLE]
 
-			//!need to replace with STATE
+			//!need to replace with TITLE
 			Fill_Char(str_Line, ' ', 1, Output_format_config.cols - 2);
 
 			ucLinePos += Output_format_config.cols - 2;
@@ -1087,7 +1091,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 					// [STRING LINE START]
 
 					// get File Text Line
-					if (fgets(str_buf, MAX_STR_BUF, ft) == "NULL")
+					if (fgets(str_buf, MAX_STR_BUF, ft) == NULL)
 					{
 						// [END OF FILE]
 
@@ -1095,14 +1099,20 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 						bFileCont = 0;
 
 						// set buffer Value to end text OP
-						str_buf[0] = '\0';
+						str_buf[0] = '\n';
+						ucLineTextSize = 1;
+						ucLineSeg = 0;
+
 					}
 					else
 					{
-						// [CONTINUE TEXT]
+						// [CONTINUE TEXT FILE]
 
 						// init segment number
 						ucLineSeg = 0;
+
+						// get Read Text Line length
+						ucLineTextSize = strlen(str_buf);
 
 					}//if (fgets(str_buf, MAX_STR_BUF, ft) == "NULL")
 				}//then /if (bCont = 0)
@@ -1115,7 +1125,6 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 				}//else /if (bLineCont = 0)
 
 				// > Proceed buffer with text file line 
-				BYTE ucLineTextSize = strlen(str_buf);
 				BYTE ucLineSize = 0;
 
 				if ( ucLineTextSize < (ucLineSeg + 1) * (Output_format_config.cols - 2) )
@@ -1123,7 +1132,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 					// [LINE TERMINATES]
 
 					// calc Line String Remains
-					ucLineSize = ucLineTextSize - ucLineSeg * (Output_format_config.cols - 2);
+					ucLineSize = ucLineTextSize - ucLineSeg * (Output_format_config.cols - 2) - 1;		// -1 from '\n' symbol shift
 
 					// copy Text from Line
 					Append_StrPart(str_buf, str_Line, ucLineSeg * (Output_format_config.cols - 2), ucLinePos, ucLineSize);
@@ -1133,10 +1142,14 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 
 					// fill Null-spaces to the End of Impact Line
 					BYTE ucLineRemains = Output_format_config.cols - 2 - ucLineSize;
+					
 					Fill_Char(str_Line, ' ', ucLinePos, ucLineRemains);
 
 					// update current LinePos
 					ucLinePos += ucLineRemains;
+
+					// set Continue Flag
+					bLineCont = 0;
 
 				}
 				else
@@ -1167,7 +1180,10 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 				// fill nulls to the end of impact page
 
 				// null string
-				str_buf[0] = '\0';
+				Fill_Char(str_Line, ' ', ucLinePos, Output_format_config.cols - 2);
+
+				// update current LinePos
+				ucLinePos += Output_format_config.cols - 2;
 
 			}//else /if (bFileCont)
 		}//if (v_rowTypes[ucRowType, 6])
@@ -1185,8 +1201,11 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 			ucLinePos++;
 		}
 
+		// set format text Command key (new line)
+		str_Line[ucLinePos] = '\n';
+
 		// set String Line ender
-		str_Line[ucLinePos] = '\0';
+		str_Line[ucLinePos + 1] = '\0';
 
 		// > Write Line to Impact Formatted File
 		fputs(str_Line, fi);

@@ -8,10 +8,10 @@ configuration file for Impact formatted output
 
 [size]
 cols
-20
+24
 
 rows
-30
+20
 \
 
 [format]
