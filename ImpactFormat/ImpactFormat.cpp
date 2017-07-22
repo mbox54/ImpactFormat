@@ -5,6 +5,7 @@
 #include <stdio.h>		// printf, fgets
 #include <string.h>		// strcmp, strlen
 #include <stdlib.h>		// atoi
+#include <time.h>		// localtime
 
 //////////////////////////////////////////////////////////////////////
 // define
@@ -915,8 +916,14 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 	}
 
 	// set Title Text
-	char str_TITLE[MAX_STR_TIT];
-	strncpy(str_TITLE, str_buf, MAX_STR_TIT);
+	char str_TITLE[MAX_STR_TIT] = { '\0' };
+	if (Output_format_config.header = 'y')
+	{
+		// [TITLE ENABLE]
+		
+		strncpy(str_TITLE, str_buf, MAX_STR_TIT);
+	}
+	
 
 	// > Create an empty File for output impact formatted. 
 	FILE *fi = fopen(str_outputFilename, "w");
@@ -1058,11 +1065,81 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 		{
 			// [TITLE]
 
-			//!need to replace with TITLE
-			Fill_Char(str_Line, ' ', 1, Output_format_config.cols - 2);
+			// > Define Date
+			BYTE ucDateSize = 0;
+			char str_Date[20];
 
-			ucLinePos += Output_format_config.cols - 2;
+			if (Output_format_config.date = 'y')
+			{
+				// [DATE ENABLE]
 
+				// vars
+				time_t date_time_now = time(NULL);
+				struct tm *tm;
+
+				// get current date_time
+				tm = localtime(&date_time_now);
+
+				// transfer date to str
+				strftime(str_Date, sizeof(str_Date), "%d%m%Y", tm);
+
+				// correct Date String length
+				ucDateSize = strlen(str_Date) + 2;			// +2 is ' ' and '/' symbols before Date
+
+			}
+
+			// > Correct Title length
+			// define Title length
+			BYTE ucLineTitleSize = strlen(str_TITLE);
+
+			// calc trim/remain Title Line Size
+			BYTE ucTitleRemains = 0;
+			BYTE ucTitleSpace = Output_format_config.cols - 2 - ucDateSize;
+
+			if (ucLineTitleSize > ucTitleSpace)
+			{
+				// [NEED TRIM]
+
+				ucLineTitleSize = ucTitleSpace;
+			}
+			else
+			{
+				// [DEFINE REMAINS]
+
+				ucTitleRemains = ucTitleSpace - ucLineTitleSize;
+			}
+
+			// > Construct Title
+			// Title part
+			Append_StrPart(str_TITLE, str_Line, 0, ucLinePos, ucLineTitleSize);
+
+			// update current LinePos
+			ucLinePos += ucLineTitleSize;
+
+			// Remains part
+			if (ucTitleRemains > 0)
+			{
+				// [REMAINS EXIST]
+
+				Fill_Char(str_Line, ' ', ucLinePos, ucTitleRemains);
+			}
+
+			// Date part
+			if (ucDateSize > 0)
+			{
+				// [DATE EXIST]
+
+				// place separator
+				str_Line[ucLinePos] = ' ';
+				ucLinePos++;
+
+				str_Line[ucLinePos] = '/';
+				ucLinePos++;
+
+				// place Date
+				Append_StrPart(str_Date, str_Line, 0, ucLinePos, ucDateSize - 2);
+				ucLinePos += ucDateSize - 2;
+			}
 		}
 
 		// [%]
