@@ -1024,9 +1024,17 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 
 			// !need correct
 			// str_Line[ucLinePos] = Output_format_config.main;
-			str_Line[ucLinePos] = '|';
 
-			ucLinePos++;
+			str_Line[ucLinePos] = '|';
+			ucLinePos++;					// update current LinePos
+
+			if (!((v_rowTypes[ucRowType][2]) || (v_rowTypes[ucRowType][3])))
+			{
+				// [NEED SPACE PADDING]
+				str_Line[ucLinePos] = ' ';
+				ucLinePos++;				// update current LinePos
+			}
+			
 		}
 
 		// [%]
@@ -1034,7 +1042,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 		{
 			// [CROSS_BAR]
 
-			Fill_Char(str_Line, Output_format_config.main, 1, Output_format_config.cols - 2);
+			Fill_Char(str_Line, Output_format_config.main, ucLinePos, Output_format_config.cols - 2);
 
 			ucLinePos += Output_format_config.cols - 2;
 		}
@@ -1044,7 +1052,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 		{
 			// [SUPPORT_BAR]
 
-			Fill_Char(str_Line, Output_format_config.support, 1, Output_format_config.cols - 2);
+			Fill_Char(str_Line, Output_format_config.support, ucLinePos, Output_format_config.cols - 2);
 
 			ucLinePos += Output_format_config.cols - 2;
 		}
@@ -1054,9 +1062,9 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 		{
 			// [NULL_BAR]
 
-			Fill_Char(str_Line, ' ', 1, Output_format_config.cols - 2);
+			Fill_Char(str_Line, ' ', ucLinePos, Output_format_config.cols - 4);
 
-			ucLinePos += Output_format_config.cols - 2;
+			ucLinePos += Output_format_config.cols - 4;
 
 		}
 
@@ -1094,7 +1102,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 
 			// calc trim/remain Title Line Size
 			BYTE ucTitleRemains = 0;
-			BYTE ucTitleSpace = Output_format_config.cols - 2 - ucDateSize;
+			BYTE ucTitleSpace = Output_format_config.cols - 4 - ucDateSize;
 
 			if (ucLineTitleSize > ucTitleSpace)
 			{
@@ -1148,9 +1156,9 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 			// [STATE]
 
 			//!need to replace with STATE
-			Fill_Char(str_Line, ' ', 1, Output_format_config.cols - 2);
+			Fill_Char(str_Line, ' ', ucLinePos, Output_format_config.cols - 4);
 
-			ucLinePos += Output_format_config.cols - 2;
+			ucLinePos += Output_format_config.cols - 4;
 		}
 
 		// [%]
@@ -1204,21 +1212,21 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 				// > Proceed buffer with text file line 
 				BYTE ucLineSize = 0;
 
-				if ( ucLineTextSize < (ucLineSeg + 1) * (Output_format_config.cols - 2) )
+				if ( ucLineTextSize < (ucLineSeg + 1) * (Output_format_config.cols - 4) )		// -4 is 2 x '|' and 2 x ' '
 				{
 					// [LINE TERMINATES]
 
 					// calc Line String Remains
-					ucLineSize = ucLineTextSize - ucLineSeg * (Output_format_config.cols - 2) - 1;		// -1 from '\n' symbol shift
+					ucLineSize = ucLineTextSize - ucLineSeg * (Output_format_config.cols - 4) - 1;		// -1 from '\n' symbol shift
 
 					// copy Text from Line
-					Append_StrPart(str_buf, str_Line, ucLineSeg * (Output_format_config.cols - 2), ucLinePos, ucLineSize);
+					Append_StrPart(str_buf, str_Line, ucLineSeg * (Output_format_config.cols - 4), ucLinePos, ucLineSize);
 
 					// update current LinePos
 					ucLinePos += ucLineSize;
 
 					// fill Null-spaces to the End of Impact Line
-					BYTE ucLineRemains = Output_format_config.cols - 2 - ucLineSize;
+					BYTE ucLineRemains = Output_format_config.cols - 4 - ucLineSize;
 					
 					Fill_Char(str_Line, ' ', ucLinePos, ucLineRemains);
 
@@ -1234,10 +1242,10 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 					// [LINE CONTINUATES]
 
 					// calc Line String Remains
-					ucLineSize = Output_format_config.cols - 2;
+					ucLineSize = Output_format_config.cols - 4;
 
 					// copy Text from Line
-					Append_StrPart(str_buf, str_Line, ucLineSeg * (Output_format_config.cols - 2), ucLinePos, ucLineSize);
+					Append_StrPart(str_buf, str_Line, ucLineSeg * (Output_format_config.cols - 4), ucLinePos, ucLineSize);
 
 					// update current LinePos
 					ucLinePos += ucLineSize;
@@ -1257,10 +1265,10 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 				// fill nulls to the end of impact page
 
 				// null string
-				Fill_Char(str_Line, ' ', ucLinePos, Output_format_config.cols - 2);
+				Fill_Char(str_Line, ' ', ucLinePos, Output_format_config.cols - 4);
 
 				// update current LinePos
-				ucLinePos += Output_format_config.cols - 2;
+				ucLinePos += Output_format_config.cols - 4;
 
 			}//else /if (bFileCont)
 		}//if (v_rowTypes[ucRowType, 6])
@@ -1272,10 +1280,17 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 
 			// !need correct
 			// str_Line[ucLinePos] = Output_format_config.main;
-			str_Line[ucLinePos] = '|';
 
-			// update current LinePos
-			ucLinePos++;
+			if (!((v_rowTypes[ucRowType][2]) || (v_rowTypes[ucRowType][3])))
+			{
+				// [NEED SPACE PADDING]
+				str_Line[ucLinePos] = ' ';
+				ucLinePos++;				// update current LinePos
+			}
+
+			str_Line[ucLinePos] = '|';			
+			ucLinePos++;					// update current LinePos
+						
 		}
 
 		// set format text Command key (new line)
