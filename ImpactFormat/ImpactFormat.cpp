@@ -968,20 +968,31 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 					// [NEXT PAGE]
 
 					// NOTE: k = 1 TITLE, k = 2 is ----- divider.
-					if ( (k > 0) && (k < 3) )
+					if (k == 0)
+					{
+						// [YBAR]
+
+						// NOP
+					}
+					else
 					{
 						// [TITLE SECTION]
 
-						// skip Title Line
-						ucRowType = RT_TEMPL_S;
-					}
-				}
-				else
-				{
-					// [TITLE PAGE]
+						if (k == 1)
+						{
+							// [NEW NBAR]
 
-					// NOP
-				}				
+							ucRowType = 3;
+						}
+						else
+						{
+							// [NEW TEXT]
+
+							//skip Title Line
+							ucRowType = RT_TEMPL_S;
+						}
+					}
+				}//if (uiPageNumber > 1)
 			}
 			else
 			{
@@ -1002,6 +1013,303 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 
 			// next Impact Line
 			k++;
+
+
+			// > Fill Row routine [#02]
+			// reset Line Position
+			ucLinePos = 0;
+		
+			// reset Line String
+			str_Line[0] = '\0';
+
+			// proceed RowType
+			// NOTE: sequence is strictly recommended
+
+			// [%]
+			if (v_rowTypes[ucRowType][0])
+			{
+				// [START_MARK]
+
+				// !need correct
+				// str_Line[ucLinePos] = Output_format_config.main;
+
+				str_Line[ucLinePos] = '|';
+				ucLinePos++;					// update current LinePos
+
+				if (!((v_rowTypes[ucRowType][2]) || (v_rowTypes[ucRowType][3])))
+				{
+					// [NEED SPACE PADDING]
+					str_Line[ucLinePos] = ' ';
+					ucLinePos++;				// update current LinePos
+				}
+			
+			}
+
+			// [%]
+			if (v_rowTypes[ucRowType][2])
+			{
+				// [CROSS_BAR]
+
+				Fill_Char(str_Line, Output_format_config.main, ucLinePos, Output_format_config.cols - 2);
+
+				ucLinePos += Output_format_config.cols - 2;
+			}
+
+			// [%]
+			if (v_rowTypes[ucRowType][3])
+			{
+				// [SUPPORT_BAR]
+
+				Fill_Char(str_Line, Output_format_config.support, ucLinePos, Output_format_config.cols - 2);
+
+				ucLinePos += Output_format_config.cols - 2;
+			}
+
+			// [%]
+			if (v_rowTypes[ucRowType][4])
+			{
+				// [NULL_BAR]
+
+				Fill_Char(str_Line, ' ', ucLinePos, Output_format_config.cols - 4);
+
+				ucLinePos += Output_format_config.cols - 4;
+
+			}
+
+			// [%]
+			if (v_rowTypes[ucRowType][5])
+			{
+				// [TITLE]
+
+				// > Define Date
+				BYTE ucDateSize = 0;
+				char str_Date[20];
+
+				if (Output_format_config.date = 'y')
+				{
+					// [DATE ENABLE]
+
+					// vars
+					time_t date_time_now = time(NULL);
+					struct tm *tm;
+
+					// get current date_time
+					tm = localtime(&date_time_now);
+
+					// transfer date to str
+					strftime(str_Date, sizeof(str_Date), "%d%m%Y", tm);
+
+					// correct Date String length
+					ucDateSize = strlen(str_Date) + 2;			// +2 is ' ' and '/' symbols before Date
+
+				}
+
+				// > Correct Title length
+				// define Title length
+				BYTE ucLineTitleSize = strlen(str_TITLE);
+
+				// calc trim/remain Title Line Size
+				BYTE ucTitleRemains = 0;
+				BYTE ucTitleSpace = Output_format_config.cols - 4 - ucDateSize;
+
+				if (ucLineTitleSize > ucTitleSpace)
+				{
+					// [NEED TRIM]
+
+					ucLineTitleSize = ucTitleSpace;
+				}
+				else
+				{
+					// [DEFINE REMAINS]
+
+					ucTitleRemains = ucTitleSpace - ucLineTitleSize;
+				}
+
+				// > Construct Title
+				// Title part
+				Append_StrPart(str_TITLE, str_Line, 0, ucLinePos, ucLineTitleSize);
+
+				// update current LinePos
+				ucLinePos += ucLineTitleSize;
+
+				// Remains part
+				if (ucTitleRemains > 0)
+				{
+					// [REMAINS EXIST]
+
+					Fill_Char(str_Line, ' ', ucLinePos, ucTitleRemains);
+				}
+
+				// Date part
+				if (ucDateSize > 0)
+				{
+					// [DATE EXIST]
+
+					// place separator
+					str_Line[ucLinePos] = ' ';
+					ucLinePos++;
+
+					str_Line[ucLinePos] = '/';
+					ucLinePos++;
+
+					// place Date
+					Append_StrPart(str_Date, str_Line, 0, ucLinePos, ucDateSize - 2);
+					ucLinePos += ucDateSize - 2;
+				}
+			}
+
+			// [%]
+			if (v_rowTypes[ucRowType][6])
+			{
+				// [STATE]
+
+				//!need to replace with STATE
+				Fill_Char(str_Line, ' ', ucLinePos, Output_format_config.cols - 4);
+
+				ucLinePos += Output_format_config.cols - 4;
+			}
+
+			// [%]
+			if (v_rowTypes[ucRowType][7])
+			{
+				// [TEXT]
+
+				if (bFileCont)
+				{
+					// [FILE TEXT PROC]
+
+					// check file continuation
+					if (bLineCont == 0)
+					{
+						// [STRING LINE START]
+
+						// get File Text Line
+						if (fgets(str_buf, MAX_STR_BUF, ft) == NULL)
+						{
+							// [END OF FILE]
+
+							// Text file ends
+							bFileCont = 0;
+
+							// set buffer Value to end text OP
+							str_buf[0] = '\n';
+							ucLineTextSize = 1;
+							ucLineSeg = 0;
+
+						}
+						else
+						{
+							// [CONTINUE TEXT FILE]
+
+							// init segment number
+							ucLineSeg = 0;
+
+							// get Read Text Line length
+							ucLineTextSize = strlen(str_buf);
+
+						}//if (fgets(str_buf, MAX_STR_BUF, ft) == "NULL")
+					}//then /if (bCont = 0)
+					else
+					{
+						// [STRING LINE CONTINUE]
+
+						// NOP
+						// NOTE: next condition OPs proceeding
+
+					}//else /if (bLineCont = 0)
+
+					// > Proceed buffer with text file line 
+					BYTE ucLineSize = 0;
+
+					if ( ucLineTextSize < (ucLineSeg + 1) * (Output_format_config.cols - 4) )		// -4 is 2 x '|' and 2 x ' '
+					{
+						// [LINE TERMINATES]
+
+						// calc Line String Remains
+						ucLineSize = ucLineTextSize - ucLineSeg * (Output_format_config.cols - 4) - 1;		// -1 from '\n' symbol shift
+
+						// copy Text from Line
+						Append_StrPart(str_buf, str_Line, ucLineSeg * (Output_format_config.cols - 4), ucLinePos, ucLineSize);
+
+						// update current LinePos
+						ucLinePos += ucLineSize;
+
+						// fill Null-spaces to the End of Impact Line
+						BYTE ucLineRemains = Output_format_config.cols - 4 - ucLineSize;
+					
+						Fill_Char(str_Line, ' ', ucLinePos, ucLineRemains);
+
+						// update current LinePos
+						ucLinePos += ucLineRemains;
+
+						// set Continue Flag
+						bLineCont = 0;
+
+					}
+					else
+					{
+						// [LINE CONTINUATES]
+
+						// calc Line String Remains
+						ucLineSize = Output_format_config.cols - 4;
+
+						// copy Text from Line
+						Append_StrPart(str_buf, str_Line, ucLineSeg * (Output_format_config.cols - 4), ucLinePos, ucLineSize);
+
+						// update current LinePos
+						ucLinePos += ucLineSize;
+
+						// set Continue Flag
+						bLineCont = 1;
+
+					}//else /if ( ucLineTextSize < (ucLineSeg + 1) * (Output_format_config.cols - 2) )
+
+					// inc segment number
+					ucLineSeg++;
+
+				}//then /if (bFileCont)
+				else
+				{
+					// [FILE TEXT ENDS]
+					// fill nulls to the end of impact page
+
+					// null string
+					Fill_Char(str_Line, ' ', ucLinePos, Output_format_config.cols - 4);
+
+					// update current LinePos
+					ucLinePos += Output_format_config.cols - 4;
+
+				}//else /if (bFileCont)
+			}//if (v_rowTypes[ucRowType, 6])
+
+			// [%]
+			if (v_rowTypes[ucRowType][1])
+			{
+				// [FINAL_MARK]
+
+				// !need correct
+				// str_Line[ucLinePos] = Output_format_config.main;
+
+				if (!((v_rowTypes[ucRowType][2]) || (v_rowTypes[ucRowType][3])))
+				{
+					// [NEED SPACE PADDING]
+					str_Line[ucLinePos] = ' ';
+					ucLinePos++;				// update current LinePos
+				}
+
+				str_Line[ucLinePos] = '|';			
+				ucLinePos++;					// update current LinePos
+						
+			}
+
+			// set format text Command key (new line)
+			str_Line[ucLinePos] = '\n';
+
+			// set String Line ender
+			str_Line[ucLinePos + 1] = '\0';
+
+			// > Write Line to Impact Formatted File
+			fputs(str_Line, fi);
 
 		}//then /if (k < Output_format_config.rows)
 		else
@@ -1032,307 +1340,9 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 
 				// exit Append Impact File
 				break;
-
 			}
 		}//else /if (k < Output_format_config.rows)
-
-		// > Fill Row routine [#02]
-		// reset Line Position
-		ucLinePos = 0;
-		
-		// reset Line String
-		str_Line[0] = '\0';
-
-		// proceed RowType
-		// NOTE: sequence is strictly recommended
-
-		// [%]
-		if (v_rowTypes[ucRowType][0])
-		{
-			// [START_MARK]
-
-			// !need correct
-			// str_Line[ucLinePos] = Output_format_config.main;
-
-			str_Line[ucLinePos] = '|';
-			ucLinePos++;					// update current LinePos
-
-			if (!((v_rowTypes[ucRowType][2]) || (v_rowTypes[ucRowType][3])))
-			{
-				// [NEED SPACE PADDING]
-				str_Line[ucLinePos] = ' ';
-				ucLinePos++;				// update current LinePos
-			}
-			
-		}
-
-		// [%]
-		if (v_rowTypes[ucRowType][2])
-		{
-			// [CROSS_BAR]
-
-			Fill_Char(str_Line, Output_format_config.main, ucLinePos, Output_format_config.cols - 2);
-
-			ucLinePos += Output_format_config.cols - 2;
-		}
-
-		// [%]
-		if (v_rowTypes[ucRowType][3])
-		{
-			// [SUPPORT_BAR]
-
-			Fill_Char(str_Line, Output_format_config.support, ucLinePos, Output_format_config.cols - 2);
-
-			ucLinePos += Output_format_config.cols - 2;
-		}
-
-		// [%]
-		if (v_rowTypes[ucRowType][4])
-		{
-			// [NULL_BAR]
-
-			Fill_Char(str_Line, ' ', ucLinePos, Output_format_config.cols - 4);
-
-			ucLinePos += Output_format_config.cols - 4;
-
-		}
-
-		// [%]
-		if (v_rowTypes[ucRowType][5])
-		{
-			// [TITLE]
-
-			// > Define Date
-			BYTE ucDateSize = 0;
-			char str_Date[20];
-
-			if (Output_format_config.date = 'y')
-			{
-				// [DATE ENABLE]
-
-				// vars
-				time_t date_time_now = time(NULL);
-				struct tm *tm;
-
-				// get current date_time
-				tm = localtime(&date_time_now);
-
-				// transfer date to str
-				strftime(str_Date, sizeof(str_Date), "%d%m%Y", tm);
-
-				// correct Date String length
-				ucDateSize = strlen(str_Date) + 2;			// +2 is ' ' and '/' symbols before Date
-
-			}
-
-			// > Correct Title length
-			// define Title length
-			BYTE ucLineTitleSize = strlen(str_TITLE);
-
-			// calc trim/remain Title Line Size
-			BYTE ucTitleRemains = 0;
-			BYTE ucTitleSpace = Output_format_config.cols - 4 - ucDateSize;
-
-			if (ucLineTitleSize > ucTitleSpace)
-			{
-				// [NEED TRIM]
-
-				ucLineTitleSize = ucTitleSpace;
-			}
-			else
-			{
-				// [DEFINE REMAINS]
-
-				ucTitleRemains = ucTitleSpace - ucLineTitleSize;
-			}
-
-			// > Construct Title
-			// Title part
-			Append_StrPart(str_TITLE, str_Line, 0, ucLinePos, ucLineTitleSize);
-
-			// update current LinePos
-			ucLinePos += ucLineTitleSize;
-
-			// Remains part
-			if (ucTitleRemains > 0)
-			{
-				// [REMAINS EXIST]
-
-				Fill_Char(str_Line, ' ', ucLinePos, ucTitleRemains);
-			}
-
-			// Date part
-			if (ucDateSize > 0)
-			{
-				// [DATE EXIST]
-
-				// place separator
-				str_Line[ucLinePos] = ' ';
-				ucLinePos++;
-
-				str_Line[ucLinePos] = '/';
-				ucLinePos++;
-
-				// place Date
-				Append_StrPart(str_Date, str_Line, 0, ucLinePos, ucDateSize - 2);
-				ucLinePos += ucDateSize - 2;
-			}
-		}
-
-		// [%]
-		if (v_rowTypes[ucRowType][6])
-		{
-			// [STATE]
-
-			//!need to replace with STATE
-			Fill_Char(str_Line, ' ', ucLinePos, Output_format_config.cols - 4);
-
-			ucLinePos += Output_format_config.cols - 4;
-		}
-
-		// [%]
-		if (v_rowTypes[ucRowType][7])
-		{
-			// [TEXT]
-
-			if (bFileCont)
-			{
-				// [FILE TEXT PROC]
-
-				// check file continuation
-				if (bLineCont == 0)
-				{
-					// [STRING LINE START]
-
-					// get File Text Line
-					if (fgets(str_buf, MAX_STR_BUF, ft) == NULL)
-					{
-						// [END OF FILE]
-
-						// Text file ends
-						bFileCont = 0;
-
-						// set buffer Value to end text OP
-						str_buf[0] = '\n';
-						ucLineTextSize = 1;
-						ucLineSeg = 0;
-
-					}
-					else
-					{
-						// [CONTINUE TEXT FILE]
-
-						// init segment number
-						ucLineSeg = 0;
-
-						// get Read Text Line length
-						ucLineTextSize = strlen(str_buf);
-
-					}//if (fgets(str_buf, MAX_STR_BUF, ft) == "NULL")
-				}//then /if (bCont = 0)
-				else
-				{
-					// [STRING LINE CONTINUE]
-
-					// NOP
-
-				}//else /if (bLineCont = 0)
-
-				// > Proceed buffer with text file line 
-				BYTE ucLineSize = 0;
-
-				if ( ucLineTextSize < (ucLineSeg + 1) * (Output_format_config.cols - 4) )		// -4 is 2 x '|' and 2 x ' '
-				{
-					// [LINE TERMINATES]
-
-					// calc Line String Remains
-					ucLineSize = ucLineTextSize - ucLineSeg * (Output_format_config.cols - 4) - 1;		// -1 from '\n' symbol shift
-
-					// copy Text from Line
-					Append_StrPart(str_buf, str_Line, ucLineSeg * (Output_format_config.cols - 4), ucLinePos, ucLineSize);
-
-					// update current LinePos
-					ucLinePos += ucLineSize;
-
-					// fill Null-spaces to the End of Impact Line
-					BYTE ucLineRemains = Output_format_config.cols - 4 - ucLineSize;
-					
-					Fill_Char(str_Line, ' ', ucLinePos, ucLineRemains);
-
-					// update current LinePos
-					ucLinePos += ucLineRemains;
-
-					// set Continue Flag
-					bLineCont = 0;
-
-				}
-				else
-				{
-					// [LINE CONTINUATES]
-
-					// calc Line String Remains
-					ucLineSize = Output_format_config.cols - 4;
-
-					// copy Text from Line
-					Append_StrPart(str_buf, str_Line, ucLineSeg * (Output_format_config.cols - 4), ucLinePos, ucLineSize);
-
-					// update current LinePos
-					ucLinePos += ucLineSize;
-
-					// set Continue Flag
-					bLineCont = 1;
-
-				}//else /if ( ucLineTextSize < (ucLineSeg + 1) * (Output_format_config.cols - 2) )
-
-				// inc segment number
-				ucLineSeg++;
-
-			}//then /if (bFileCont)
-			else
-			{
-				// [FILE TEXT ENDS]
-				// fill nulls to the end of impact page
-
-				// null string
-				Fill_Char(str_Line, ' ', ucLinePos, Output_format_config.cols - 4);
-
-				// update current LinePos
-				ucLinePos += Output_format_config.cols - 4;
-
-			}//else /if (bFileCont)
-		}//if (v_rowTypes[ucRowType, 6])
-
-		// [%]
-		if (v_rowTypes[ucRowType][1])
-		{
-			// [FINAL_MARK]
-
-			// !need correct
-			// str_Line[ucLinePos] = Output_format_config.main;
-
-			if (!((v_rowTypes[ucRowType][2]) || (v_rowTypes[ucRowType][3])))
-			{
-				// [NEED SPACE PADDING]
-				str_Line[ucLinePos] = ' ';
-				ucLinePos++;				// update current LinePos
-			}
-
-			str_Line[ucLinePos] = '|';			
-			ucLinePos++;					// update current LinePos
-						
-		}
-
-		// set format text Command key (new line)
-		str_Line[ucLinePos] = '\n';
-
-		// set String Line ender
-		str_Line[ucLinePos + 1] = '\0';
-
-		// > Write Line to Impact Formatted File
-		fputs(str_Line, fi);
-
 	}//while (act)
-
 
 	// > Close File (text) 
 	fclose(ft);
@@ -1340,11 +1350,9 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 	// > Close File (impact) 
 	fclose(fi);
 
-
 	return OP_SUCCESS;
-
-
 }
+
 
 //////////////////////////////////////////////////////////////////////
 // Main routine
