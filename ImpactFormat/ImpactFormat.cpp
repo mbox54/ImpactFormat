@@ -314,6 +314,7 @@ BYTE Read_config(st_format_config * Output_format_config)
 
 						BYTE readFileProc = GetStrTag(str_buf, str_tag, '[', ']');
 
+						// > Safe check
 						if (readFileProc != OP_SUCCESS)
 						{
 							// [OP FAILED]
@@ -325,6 +326,7 @@ BYTE Read_config(st_format_config * Output_format_config)
 							return FILE_STRUC_ERR;
 						}
 
+						// > Parse Label Type
 						// define label type
 						if (strcmp(str_tag, "[descr]") == 0)
 						{
@@ -870,7 +872,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 	// N-2 |	| 						/PAGE X |
 	// N-1 |	|===========			========| 
 
-	BYTE v_rowTypes[9][8] = {
+	const BYTE v_rowTypes[9][8] = {
 //	0  1  2  3  4  5  6  7 
 	1, 1, 1, 0, 0, 0, 0, 0,	// [0]
 	1, 1, 0, 0, 0, 1, 0, 0,	// [1]
@@ -942,6 +944,7 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 	BYTE bLineCont = 0;		// file line = impact multiline
 	BYTE bFileCont = 1;		// impact end line reach
 	BYTE ucLineTextSize;
+	WORD uiPageNumber = 1;	// current Page number
 
 	char str_Line[MAX_STR_LINE];
 
@@ -955,21 +958,42 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 
 			if (k < RT_TEMPL_S)
 			{
-				// [IN IMPACT PAGE STARTER]
+				// [IN IMPACT PAGE -> STARTER]
 
 				ucRowType = k;
+
+				// check Skip Title case
+				if (uiPageNumber > 1)
+				{
+					// [NEXT PAGE]
+
+					// NOTE: k = 1 TITLE, k = 2 is ----- divider.
+					if ( (k > 0) && (k < 3) )
+					{
+						// [TITLE SECTION]
+
+						// skip Title Line
+						ucRowType = RT_TEMPL_S;
+					}
+				}
+				else
+				{
+					// [TITLE PAGE]
+
+					// NOP
+				}				
 			}
 			else
 			{
 				if (k > Output_format_config.rows - RT_TEMPL_F - 1)
 				{
-					// [IN IMPACT PAGE FINALIZES]
+					// [IN IMPACT PAGE -> FINALIZES]
 
 					ucRowType = RT_TEMPL_N - (Output_format_config.rows - k);
 				}
 				else
 				{
-					// [IN IMPACT PAGE TEXT]
+					// [IN IMPACT PAGE -> TEXT]
 
 					// position next to RT_TEMPL_S is TEXT position
 					ucRowType = RT_TEMPL_S;
@@ -988,11 +1012,16 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 			{
 				// [TEXT FILE NOT ENDED]
 
+				// > New Page
 				// reset impact page Row counter
 				k = 0;
 
 				// define RowType
 				ucRowType = k;
+
+				// increment Page
+				uiPageNumber++;
+
 			}
 			else
 			{
