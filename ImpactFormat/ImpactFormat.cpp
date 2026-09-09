@@ -51,7 +51,26 @@ typedef struct st_format_config
 //////////////////////////////////////////////////////////////////////
 // service PROCs
 //////////////////////////////////////////////////////////////////////
-// cut label header from string line
+/**
+ * @brief Извлекает тег из строки между указанными открывающим и закрывающим символами.
+ * 
+ * Функция выполняет поиск подстроки, заключённой между заданными символами
+ * (например, [tag] или <tag>). Работает в трёх режимах:
+ * - act = 0: завершение цикла
+ * - act = 1: поиск открывающего символа
+ * - act = 2: поиск закрывающего символа
+ * 
+ * @param strParse Входная строка для анализа
+ * @param strOutput Выходная строка для хранения извлечённого тега (включая символы)
+ * @param chOpenSymbol Символ, обозначающий начало тега (например, '[')
+ * @param chCloseSymbol Символ, обозначающий конец тега (например, ']')
+ * @return BYTE OP_SUCCESS при успешном извлечении, OP_FAILURE при ошибке
+ * 
+ * @note При ошибке в strOutput записывается одно из значений:
+ *       - "NULL_START" - не найден открывающий символ
+ *       - "NULL_END" - не найден закрывающий символ
+ *       - "PARSE_ERROR" - ошибка парсинга (начальная позиция больше конечной)
+ */
 BYTE GetStrTag(char * strParse, char * strOutput, char chOpenSymbol, char chCloseSymbol)
 {
 	// proc symbols
@@ -167,6 +186,18 @@ BYTE GetStrTag(char * strParse, char * strOutput, char chOpenSymbol, char chClos
 	return OP_SUCCESS;
 }
 
+/**
+ * @brief Заполняет строку указанным символом начиная с заданной позиции.
+ * 
+ * Функция заполняет часть строки повторяющимся символом и добавляет
+ * завершающий нулевой символ.
+ * 
+ * @param str_Fill Строка для заполнения
+ * @param chSymbol Символ, которым выполняется заполнение
+ * @param ucFromPos Начальная позиция в строке для заполнения
+ * @param ucCount Количество символов для записи
+ * @return BYTE Всегда возвращает 0 (успех)
+ */
 // fill str with defined char from position X to X + C
 BYTE Fill_Char(char * str_Fill, char chSymbol, BYTE ucFromPos, BYTE ucCount)
 {
@@ -182,6 +213,20 @@ BYTE Fill_Char(char * str_Fill, char chSymbol, BYTE ucFromPos, BYTE ucCount)
 	return 0;
 }
 
+/**
+ * @brief Копирует часть строки из одной строки в другую.
+ * 
+ * Функция копирует указанное количество символов из исходной строки,
+ * начиная с заданной позиции, в целевую строку, начиная с указанной позиции.
+ * После копирования добавляет завершающий нулевой символ.
+ * 
+ * @param str_Input Исходная строка
+ * @param str_Output Целевая строка для копирования
+ * @param ucFromPos Начальная позиция в исходной строке
+ * @param ucToPos Начальная позиция в целевой строке
+ * @param ucCount Количество символов для копирования
+ * @return BYTE Всегда возвращает 0 (успех)
+ */
 // copy number C of chars from str_input position X1 to str_output position X2
 BYTE Append_StrPart(char * str_Input, char * str_Output, BYTE ucFromPos, BYTE ucToPos, BYTE ucCount)
 {
@@ -197,6 +242,25 @@ BYTE Append_StrPart(char * str_Input, char * str_Output, BYTE ucFromPos, BYTE uc
 	return 0;
 }
 
+/**
+ * @brief Читает и парсит файл конфигурации с параметрами форматирования.
+ * 
+ * Функция открывает файл config.txt и считывает параметры конфигурации,
+ * включая описание, версию, размеры, формат вывода и символы.
+ * 
+ * Формат файла конфигурации:
+ * - [descr] ... /descr end/  - описание
+ * - [version] ... \\          - версия
+ * - [size] cols/rows ... \\   - размеры (колонки и строки)
+ * - [format] outer/header/date/state ... \\ - флаги формата (y/n)
+ * - [symbol] main/support ... \\ - символы форматирования
+ * 
+ * @param Output_format_config Указатель на структуру для сохранения параметров конфигурации
+ * @return BYTE Статус выполнения:
+ *         - OP_SUCCESS - успешное чтение
+ *         - FILE_NOFILE - файл не найден
+ *         - FILE_STRUC_ERR - ошибка структуры файла
+ */
 // read config file with format parameters
 BYTE Read_config(st_format_config * Output_format_config)
 {
@@ -843,6 +907,27 @@ BYTE Read_config(st_format_config * Output_format_config)
 }
 
 
+/**
+ * @brief Обрабатывает входный файл и создаёт отформатированный выходной файл.
+ * 
+ * Функция читает текстовый файл, применяет параметры форматирования из конфигурации
+ * и записывает результат в выходной файл. Использует матрицу типов строк (v_rowTypes)
+ * для определения структуры каждой строки output-файла.
+ * 
+ * Структура выходного файла:
+ * - Строка 0: верхняя граница (|=== ... ===|)
+ * - Строка 1: заголовок с названием и датой
+ * - Строка 2: разделитель (|--- ... ---|)
+ * - Строки 3..N-4: основной текст
+ * - Строка N-3: нижний разделитель
+ * - Строка N-2: информация о странице
+ * - Строка N-1: нижняя граница
+ * 
+ * @param str_imputFilename Имя входного файла для обработки
+ * @param str_outputFilename Имя выходного файла для записи результата
+ * @param Output_format_config Структура с параметрами форматирования
+ * @return BYTE Статус выполнения операции
+ */
 // read config file with format parameters
 BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_format_config Output_format_config)
 {
@@ -1357,6 +1442,24 @@ BYTE Interpret_impact(char * str_imputFilename, char * str_outputFilename, st_fo
 //////////////////////////////////////////////////////////////////////
 // Main routine
 //////////////////////////////////////////////////////////////////////
+/**
+ * @brief Главная функция приложения ImpactFormat.
+ * 
+ * Точка входа в консольное приложение. Выполняет следующие действия:
+ * 1. Выводит приветственное сообщение
+ * 2. Читает файл конфигурации через Read_config()
+ * 3. Обрабатывает параметры командной строки:
+ *    - -help   : вывод справки
+ *    - -s      : тихий режим
+ *    - -config : вывод конфигурации
+ *    - -file=<имя> :指定 имени файла для обработки
+ * 4. Вызывает Interpret_impact() для форматирования файла textfile.txt
+ * 5. Ожидает нажатия клавиши перед выходом
+ * 
+ * @param argc Количество аргументов командной строки
+ * @param argv Массив строк с аргументами командной строки
+ * @return int Код возврата: 0 при успешном завершении
+ */
 int main(int argc, char * argv[]) 
 {
 	// > Output Common Info
